@@ -1,0 +1,7 @@
+version: '3'
+services:
+  homer:
+    build:
+      context: ./
+    ports:
+      - 5000:5000
