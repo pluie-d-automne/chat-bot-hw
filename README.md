@@ -17,7 +17,4 @@ https://www.kaggle.com/datasets/pierremegret/dialogue-lines-of-the-simpsons?reso
 3) Experiments.ipynb - обучим нужные модели по примеру того, что было на семинарах.
 4) Вынесем основные классы в отдельные файлы для возможности использовать их как в ноутбуках, так и в приложении:
     * app/dataset/homer_dataset.py
-
-
-
-https://youtu.be/70H_7C0kMbI
+5) Пример, как оформить чат-бот в виде Flask app взяла отсюда: https://github.com/sahil-rajput/Candice-YourPersonalChatBot
