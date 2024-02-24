@@ -35,7 +35,7 @@ def test_cross_encoder_bert():
     output = model(input_ids, attention_mask)
     assert output.shape == (1, 1), "Output shape is incorrect"
     
-def train_step_fn(model, optimizer, scheduler, loss_fn, batch, device, batch_size):
+def train_step_fn(model, optimizer, scheduler, loss_fn, batch, device):
     model.train()
     input_ids = batch['input_ids'].to(device)
     attention_mask = batch['attention_mask'].to(device)
@@ -58,13 +58,13 @@ def val_step_fn(model, loss_fn, batch, device):
     loss = loss_fn(logits.squeeze(-1), labels)
     return loss.item()
 
-def mini_batch(model, dataloader, optimizer, scheduler, loss_fn, step_fn, batch_size, is_training=True):
+def mini_batch(model, dataloader, optimizer, scheduler, loss_fn, step_fn, batch_size, device, is_training=True):
     mini_batch_losses = []
     for i, batch in enumerate(dataloader):
         if is_training:
-            loss = step_fn(model, optimizer, scheduler, loss_fn, batch)
+            loss = step_fn(model, optimizer, scheduler, loss_fn, batch, device)
         else:
-            loss = step_fn(model, loss_fn, batch)
+            loss = step_fn(model, loss_fn, batch, device)
         mini_batch_losses.append(loss)
         if i % (batch_size * 4) == 0:
             print(f"Step {i:>5}/{len(dataloader)}, Loss = {loss:.3f}")
@@ -72,7 +72,7 @@ def mini_batch(model, dataloader, optimizer, scheduler, loss_fn, step_fn, batch_
 
 def get_ranked_docs(
     tokenizer: AutoTokenizer, finetuned_ce: CrossEncoderBert,
-    base_bert: AutoModel, query: str, corpus: list[str],
+    query: str, corpus: list[str],
     device, MAX_LENGTH=128, 
 ) -> None:
 
@@ -86,21 +86,9 @@ def get_ranked_docs(
         ce_scores = finetuned_ce(tokenized_texts['input_ids'], tokenized_texts['attention_mask']).squeeze(-1)
         ce_scores = torch.sigmoid(ce_scores)  # Apply sigmoid if needed
 
-    # Base Bert model scoring
-    with torch.no_grad():
-        base_bert_outputs = base_bert(**tokenized_texts)
-        bert_scores = torch.sigmoid(finetuned_ce.linear(base_bert_outputs.last_hidden_state[:, 0, :]))  # Use CLS token output
-
     # Process scores for finetuned model
     print(f"Query - {query} [Finetuned Cross-Encoder]\n---")
     scores = ce_scores.cpu().numpy()
-    scores_ix = np.argsort(scores)[::-1]
-    for ix in scores_ix:  # Limit to corpus size
-        print(f"{scores[ix]: >.2f}\t{corpus[ix]}")
-
-    # Process scores for base Bert model
-    print(f"\nQuery - {query} [Bert Base]\n---")
-    scores = bert_scores.cpu().numpy().squeeze(-1)
     scores_ix = np.argsort(scores)[::-1]
     for ix in scores_ix:  # Limit to corpus size
         print(f"{scores[ix]: >.2f}\t{corpus[ix]}")
